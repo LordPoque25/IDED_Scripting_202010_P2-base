@@ -26,6 +26,9 @@ public class UIController : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
+        Target.OnPlayerHit += UpdateUI;
+        Target.OnPlayerScoreChanged += UpdateScore;
+        Player.OnPlayerDied += UpdateUI;
         ToggleRestartButton(false);
 
         playerRef = FindObjectOfType<Player>();
@@ -70,5 +73,9 @@ public class UIController : MonoBehaviour
 
             ToggleRestartButton(true);
         }
+    }
+    public void UpdateScore(int _donothing)
+    {
+        UpdateUI();
     }
 }

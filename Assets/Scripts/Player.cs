@@ -1,9 +1,15 @@
 ﻿using System;
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider))]
 public class Player : MonoBehaviour
 {
+    [SerializeField] Rigidbody[] bullets;
+    [SerializeField] int maxAmmo;
+    private int ammo = 0;
+    public bool dead = false;
+
     public const int PLAYER_LIVES = 3;
 
     private const float PLAYER_RADIUS = 0.4F;
@@ -13,6 +19,13 @@ public class Player : MonoBehaviour
     private float moveSpeed = 1F;
 
     private float hVal;
+
+    // Eventos
+
+    public delegate void OnPlayerStateChange();
+    public static event OnPlayerStateChange OnPlayerDied;
+
+
 
     #region Bullet
 
@@ -62,14 +75,15 @@ public class Player : MonoBehaviour
     private bool ReachedLeftBound { get => referencePointComponent <= leftCameraBound; }
 
     private bool CanShoot { get => bulletSpawnPoint != null && bullet != null; }
+    public bool Dead { get => Dead1; set => Dead1 = value; }
+    public bool Dead1 { get => dead; set => dead = value; }
 
     #endregion MovementProperties
-
-    public Action OnPlayerDied;
 
     // Start is called before the first frame update
     private void Start()
     {
+        Target.OnPlayerScoreChanged += AddScore;
         leftCameraBound = Camera.main.ViewportToWorldPoint(new Vector3(
             0F, 0F, 0F)).x + PLAYER_RADIUS;
 
@@ -77,6 +91,16 @@ public class Player : MonoBehaviour
             1F, 0F, 0F)).x - PLAYER_RADIUS;
 
         Lives = PLAYER_LIVES;
+        Target.OnPlayerHit += SustractLives;
+
+        bullets = new Rigidbody[maxAmmo];
+
+        for (int i = 0; i < bullets.Length ; i++)
+        {
+            GameObject clone = Instantiate(bullet.gameObject, Vector3.zero, Quaternion.identity);
+            bullets[i] = clone.GetComponent<Rigidbody>();
+            clone.SetActive(false);
+        }
     }
 
     // Update is called once per frame
@@ -100,10 +124,43 @@ public class Player : MonoBehaviour
             if ((Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
                 && CanShoot)
             {
-                Instantiate<Rigidbody>
-                   (bullet, bulletSpawnPoint.position, bulletSpawnPoint.rotation)
-                   .AddForce(transform.up * bulletSpeed, ForceMode.Impulse);
+                Shoot();
             }
         }
     }
+    public void AddScore(int _ScoreToAdd)
+    {
+        Score += _ScoreToAdd;
+    }
+    public void SustractLives()
+    {
+        Lives--;
+        if (Lives<1)
+        {
+            OnPlayerDied();
+        }
+        if (Lives <= 0)
+        {
+            Dead = true;
+        }
+    }
+
+    public void Shoot()
+    {
+        if (ammo >= maxAmmo)
+        {
+            ammo = 0;
+        }
+        if (bullets[ammo].gameObject.activeInHierarchy == false)
+        {
+            bullets[ammo].gameObject.SetActive(true);
+        }
+
+        bullets[ammo].velocity = Vector3.zero;
+        bullets[ammo].gameObject.transform.position = transform.position;
+        bullets[ammo].AddForce(transform.up * bulletSpeed, ForceMode.Impulse);
+
+        ammo += 1;
+    }
+
 }
